@@ -1,80 +1,66 @@
 from typing import Literal
 from typeguard import typechecked
+import pandas as pd
+from datetime import datetime
 
-class Grade:
-    __slots__ = ['__grade', '__weight', '__comment', '__valid', '__invalidation_reason']
-
-    # TODO: Do something so that we got intermediate thingies.
-    # TODO: maybe a field for just "plus" ? have to think about it.
-    grades = Literal[1, 2, 3, 4, 5, 6]
+class Subject:
+    __slots__ = ['__subject_name', '__teachers_name', '__grades']
+    
+    valid_grades = Literal[
+        '1',        
+        '2',
+        '2+',
+        '3',
+        '3+',
+        '4',
+        '4+',
+        '5',
+        '5+',
+        '6'
+    ]
     weights = Literal[1, 2, 3, 4]
     
     @typechecked
-    def __init__(self, grade: grades, weight: weights=1, comment: str=None) -> None:
+    def __init__(self, subject_name: str, teacher: str=None) -> None:
+        self.__teachers_name = teacher
+        self.__subject_name = subject_name
+        self.__grades = pd.DataFrame(
+            columns=[
+                'grade',  
+                'weight', 
+                'comment',
+                'date',
+                
+                'valid',
+                'invalidation reason',
+                'invalidation date'
+            ]
+        )
         
-        self.__grade = grade
-        self.__weight = weight
-        # TODO: dateime automaticaly added to comment while created
-        self.__comment = comment
-        self.__valid = True
-        
-    
-    def get_grade(self) -> int:
-        return self.__grade
-    
-    def get_weight(self) -> int:
-        return self.__weight
-    
-    def get_comment(self) -> str:
-        return self.__comment
-    
-    def is_valid(self) -> bool:
-        return self.__valid
+    @typechecked
+    def add_grade(self, grade: valid_grades, weight: weights=1, comment: str=None) -> None:
+        self.__grades = self.__grades.append(
+            {
+                'date'      : datetime.now(),
+                'grade'     : grade,
+                'weight'    : weight,
+                'comment'   : comment,
+                
+                'valid'                 : True,                
+                'invalidation reason'   : None,
+                'invalidation date'     : None
+            },
+            ignore_index=True
+        )
     
     @typechecked
-    def change_weight(self, weight: weights) -> None:
-        # TODO: Exeception?
-        if self.__valid:
-            self.__weight = weight
-        else:
-            print('Grade invalidated. Cannot change.')    
+    def invalidate_grade(self, index: int, reason: str) -> None:
+        self.__grades.loc[index,'valid'] = False
+        self.__grades.loc[index,'invalidation reason'] = reason
+        self.__grades.loc[index,'invalidation date'] = datetime.now()
+     
+    @typechecked   
+    def get_grades(self) -> pd.DataFrame:        
+        return self.__grades.copy()
     
-    @typechecked
-    def add_comment(self, comment: str) -> None:
-        # TODO: Exeception?
-        if self.__valid:
-            # TODO: datetime automaticaly added to edit
-            # TODO: change comments section to list
-            self.__comment += '; ' + comment
-        else:
-            print('Grade invalidated. Cannot change.')
-            
-    @typechecked
-    def invalidate(self, reason) -> None:
-        # TODO: Exeception?
-        if self.__valid:
-            self.__valid = False
-            self.__invalidation_reason = reason
-        else:
-            print('Grade invalidated. Cannot change.')
-            
-    
-    def __repr__(self) -> str:        
-        message = ''
-          
-        if not self.__valid:
-            message += 'invalidated: ' + self.__invalidation_reason + ', '     
-                   
-        message += 'grade: ' + str(self.__grade) + ', weight: ' + str(self.__weight)        
-        
-        if self.__comment:
-            message += ', comment: ' + self.__comment       
-                 
-        return message
-            
-        
-    grade = property(get_grade)
-    weight = property(get_weight, change_weight)
-    comment = property(get_comment, add_comment)
-    valid = property(is_valid)
-    
+    grades = property(get_grades)
